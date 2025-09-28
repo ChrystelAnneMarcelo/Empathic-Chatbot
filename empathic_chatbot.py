@@ -30,7 +30,6 @@ class EmpathicChatbot:
         ]
 
     def detect_emotion(self, text):
-        # Clean text for keyword check
         clean_text = text.lower()
         
         # First, check for stress keywords (often urgent)
