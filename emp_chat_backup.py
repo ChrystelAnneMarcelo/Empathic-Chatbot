@@ -7,7 +7,25 @@ empathetic mental health support based on PDF documents and conversation history
 
 Architecture Overview:
 1. PDF Documents → Text Chunks → Vector Embeddings → ChromaDB (Knowledge Base)
-2. User Query → Vector Search → Relevant Context + Conversation History
+2. Use    # Information modal content
+    help_text = """
+    ## How to Use This Chatbot
+
+    **For Emotional Support:**
+    - Share your feelings openly - I'll listen and validate
+    - I remember our conversation to provide better support
+
+    **For Advice:**
+    - Ask specific questions like "How do I deal with anxiety?"
+    - Request tips, strategies, or suggestions
+
+    **Emergency Resources:**
+    - **Crisis Text Line**: Text HOME to 741741
+    - **National Suicide Prevention Lifeline**: 988
+    - **Emergency**: 911
+
+    **Remember**: This is supportive AI, not professional therapy.
+    """arch → Relevant Context + Conversation History
 3. Context + Query + History → LLM → Empathetic Response
 
 Key Features:
@@ -151,10 +169,10 @@ Mental health context: {context}
 Current message: {query}
 
 RESPONSE GUIDELINES:
-- For emotional expressions with minimal advice requests: Focus on validation ("I hear you", "That sounds really difficult") and ask gentle follow-up questions
-- For advice requests (even with emotion): Provide brief validation THEN offer practical, helpful guidance from the mental health resources. Avoid directly citing reserach publications explicitly, be as human as possible.
+- For emotional expressions WITHOUT advice requests: Focus on validation ("I hear you", "That sounds really difficult") and ask gentle follow-up questions
+- For advice requests (even with emotion): Provide brief validation THEN offer practical, helpful guidance from the mental health resources
 - For pure advice requests: Give warm, practical guidance while maintaining supportive tone
-- Keep emotional validation responses shorter (3-5 sentences), advice responses can be more detailed
+- Keep emotional validation responses shorter (2-3 sentences), advice responses can be more detailed
 - Reference previous conversation naturally, like a caring friend would
 - Be human, warm, and present - not clinical or robotic
 - When giving advice, make it actionable and easy to understand
@@ -198,15 +216,15 @@ Respond appropriately:"""
 			# Adjust prompt based on emotional tone AND advice-seeking
 			if is_emotional and not is_seeking_advice:
 				# Pure emotional expression - prioritize validation
-				emotion_guidance = "\\n\\nEMOTIONAL RESPONSE NEEDED: The user is expressing vulnerability but not explicitly asking for advice. Start with validation and emotional support (ensure that you are here to listen), then gently ask if they'd like to talk more about it or if there's anything specific that might help."
+				emotion_guidance = "\\n\\nEMOTIONAL RESPONSE NEEDED: The user is expressing vulnerability but not explicitly asking for advice. Start with validation and emotional support, then gently ask if they'd like to talk more about it or if there's anything specific that might help."
 				context = context + emotion_guidance
 			elif is_emotional and is_seeking_advice:
 				# Emotional + advice request - validate first, then provide guidance
-				emotion_guidance = "\\n\\nEMOTIONAL + ADVICE RESPONSE: The user is vulnerable AND asking for help. Start with brief validation ('I hear how difficult this is for you'), then provide gentle, practical guidance based on the mental health resources. Avoid directly citing reserach publications explicitly, act as human as possible."
+				emotion_guidance = "\\n\\nEMOTIONAL + ADVICE RESPONSE: The user is vulnerable AND asking for help. Start with brief validation ('I hear how difficult this is for you'), then provide gentle, practical guidance based on the mental health resources."
 				context = context + emotion_guidance
 			elif is_seeking_advice:
 				# Pure advice request - provide helpful guidance
-				advice_guidance = "\\n\\nADVICE RESPONSE: The user is specifically asking for guidance. Provide helpful, practical advice based on the mental health resources while maintaining a warm, supportive tone. Avoid directly citing reserach publications explicitly, act as human as possible."
+				advice_guidance = "\\n\\nADVICE RESPONSE: The user is specifically asking for guidance. Provide helpful, practical advice based on the mental health resources while maintaining a warm, supportive tone."
 				context = context + advice_guidance
 			
 			# Create complete prompt by filling in the template
@@ -342,7 +360,12 @@ def exit_application():
 with gr.Blocks(theme = 'earneleh/paris') as app:
     # Header and description
     gr.Markdown("# Empathetic Mental Health Support")
-    gr.Markdown("I'm here to listen and support you.")
+    gr.Markdown("I'm here to listen and support you. I prioritize understanding your feelings before offering any guidance.")
+    gr.Markdown("**Note**: I focus on emotional validation first, especially when you're feeling vulnerable.")
+
+    # Main chat interface
+    # fn=response: Function to call when user sends message
+    # type="messages": Use modern message format for better conversation flow
     chatbot = gr.ChatInterface(fn=response, title="Empathic Listener", type="messages")
 
     # Simple exit button
@@ -353,6 +376,78 @@ with gr.Blocks(theme = 'earneleh/paris') as app:
         fn=exit_application,
         inputs=None,
         outputs=None
+    )
+
+    gr.Markdown("**Remember**: For crisis situations or urgent concerns, please reach out to a mental health professional or crisis helpline immediately.")
+
+# Create the web interface using Gradio Blocks
+with gr.Blocks(theme = 'earneleh/paris') as app:
+    # Header and description
+    gr.Markdown("# Empathetic Mental Health Support")
+    gr.Markdown("I'm here to listen and support you. I prioritize understanding your feelings before offering any guidance.")
+    gr.Markdown("**Note**: I focus on emotional validation first, especially when you're feeling vulnerable.")
+
+    # Main chat interface
+    # fn=response: Function to call when user sends message
+    # type="messages": Use modern message format for better conversation flow
+    chatbot = gr.ChatInterface(fn=response, title="Empathic Listener", type="messages")
+
+    # Control buttons section
+    with gr.Row():
+        with gr.Column(scale=1):
+            exit_btn = gr.Button("Exit Safely", variant="stop", size="sm")
+        with gr.Column(scale=1):
+            info_btn = gr.Button("Help", variant="secondary", size="sm")
+        with gr.Column(scale=2):
+            status_text = gr.Markdown("**Status**: Ready to listen and support you")
+
+    # Information modal content
+    help_text = """
+    ## � How to Use This Chatbot
+
+    **For Emotional Support:**
+    - Share your feelings openly - I'll listen and validate
+    - I remember our conversation to provide better support
+
+    **For Advice:**
+    - Ask specific questions like "How do I deal with anxiety?"
+    - Request tips, strategies, or suggestions
+
+    **Emergency Resources:**
+    - 🆘 **Crisis Text Line**: Text HOME to 741741
+    - 📞 **National Suicide Prevention Lifeline**: 988
+    - 🏥 **Emergency**: 911
+
+    **Remember**: This is supportive AI, not professional therapy.
+    """
+
+    # Create modal for help information
+    with gr.Column(visible=False) as help_modal:
+        gr.Markdown(help_text)
+        close_help_btn = gr.Button("Close", variant="secondary")
+
+    # Button functionality
+    def show_help():
+        return gr.update(visible=True)
+    
+    def hide_help():
+        return gr.update(visible=False)
+
+    # Connect button events
+    exit_btn.click(
+        fn=exit_application,
+        inputs=None,
+        outputs=None
+    )
+    
+    info_btn.click(
+        fn=show_help,
+        outputs=help_modal
+    )
+    
+    close_help_btn.click(
+        fn=hide_help,
+        outputs=help_modal
     )
 
     gr.Markdown("**Remember**: For crisis situations or urgent concerns, please reach out to a mental health professional or crisis helpline immediately.")
